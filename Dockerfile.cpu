@@ -1,0 +1,65 @@
+# VideoAnnotator Production Docker Image - CPU Version
+# This image does NOT include models/weights - they download automatically on first use
+#
+# Usage:
+#   docker build -f Dockerfile.cpu -t videoannotator:cpu .
+#   docker run --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:cpu
+
+FROM ubuntu:24.04
+
+# Use bash with pipefail so RUN commands that use a pipe fail when any stage does
+SHELL ["/bin/bash","-o","pipefail","-lc"]
+
+# Prevent interactive prompts during package installation
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install base packages and locales in a single RUN to reduce layers and avoid
+# pulling recommended packages unnecessarily (DL3015, DL3059)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl python3 python3-venv python3-pip python3-dev git git-lfs ffmpeg \
+    libgl1-mesa-dri libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 locales \
+    && locale-gen en_US.UTF-8 \
+    && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/* \
+    && git lfs install
+
+# Export UTF-8 locale for all processes
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+ENV UV_LINK_MODE=copy
+
+# Install uv, copy sources, and install dependencies and CPU PyTorch in grouped RUNs
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+WORKDIR /app
+
+# Copy source code explicitly (exclude models/weights)
+COPY pyproject.toml uv.lock ./
+COPY api_server.py ./
+COPY src/ ./src/
+COPY configs/ ./configs/
+COPY scripts/ ./scripts/
+
+# Install dependencies, then override with CPU-only PyTorch wheels.
+# Keep torch/torchvision/torchaudio versions compatible.
+RUN uv sync --frozen --no-editable \
+    && HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh \
+    && uv pip install "torch==2.6.0+cpu" "torchvision==0.21.0+cpu" "torchaudio==2.6.0+cpu" --index-url https://download.pytorch.org/whl/cpu
+
+# Verify CPU setup (no GPU packages installed)
+RUN uv run python3 -c "\
+import torch; \
+print(f'[CPU BUILD] CUDA available: {torch.cuda.is_available()}'); \
+print(f'[CPU BUILD] PyTorch version: {torch.__version__}'); \
+print('[CPU BUILD] Production image ready - models will download on first use');"
+
+# Set environment for production
+ENV PYTHONUNBUFFERED=1
+
+# Create directories for mounted volumes
+RUN mkdir -p /app/data /app/output /app/logs
+
+EXPOSE 18011
+
+CMD ["uv", "run", "python3", "api_server.py", "--log-level", "info", "--port", "18011"]

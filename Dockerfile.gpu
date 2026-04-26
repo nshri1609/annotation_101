@@ -1,0 +1,78 @@
+# VideoAnnotator Production Docker Image - GPU Version
+# This image does NOT include models/weights - they download automatically on first use
+#
+# Usage:
+#   docker build -f Dockerfile.gpu -t videoannotator:gpu .
+#   docker run --gpus all --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:gpu
+
+FROM nvidia/cuda:12.6.0-runtime-ubuntu24.04
+
+# Use bash with pipefail so RUN commands that use a pipe fail when any stage does
+SHELL ["/bin/bash","-o","pipefail","-lc"]
+
+# Prevent interactive prompts during package installation
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install base packages and locales in a single RUN to reduce layers and avoid
+# pulling recommended packages unnecessarily (DL3015, DL3059)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl python3 python3-venv python3-dev git git-lfs ffmpeg \
+    libgl1-mesa-dri libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 locales \
+    && locale-gen en_US.UTF-8 \
+    && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/* \
+    && git lfs install
+
+# Export UTF-8 locale for all processes
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+ENV UV_LINK_MODE=copy
+
+# uv package manager
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+WORKDIR /app
+
+# Build args to allow dev builds to skip network-heavy steps (defaults: true)
+# For production image builds set these to "false" to perform installs in image.
+ARG SKIP_IMAGE_UV_SYNC=true
+ARG SKIP_TORCH_INSTALL=true
+
+# Copy project definition and lock file first to leverage Docker cache
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies (including torch from configured index)
+# These steps can be skipped at build time for dev containers by setting
+# build args SKIP_IMAGE_UV_SYNC=true. Post-create commands will run `uv sync`
+# inside the running container where network is usually available.
+RUN if [ "${SKIP_IMAGE_UV_SYNC}" != "true" ]; then uv sync --frozen --no-install-project --no-editable; else echo "[BUILD] Skipping uv sync at image build (SKIP_IMAGE_UV_SYNC=true)"; fi
+
+# Copy the rest of the source code (explicitly exclude models/weights)
+COPY api_server.py ./
+COPY src/ ./src/
+COPY configs/ ./configs/
+COPY scripts/ ./scripts/
+
+# Install hadolint into a system location so pre-commit can find it.
+RUN HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh
+
+# Verify GPU access (optional)
+# NOTE: Some builds may intentionally skip Torch installation/sync to speed up
+# devcontainer image builds. In that case, skip the Torch import check.
+RUN if [ "${SKIP_TORCH_INSTALL}" = "true" ]; then \
+        echo "[BUILD] Skipping Torch verification (SKIP_TORCH_INSTALL=true)"; \
+    else \
+        uv run python3 -c "import torch; print(f'[GPU BUILD] CUDA available: {torch.cuda.is_available()}'); print(f'[GPU BUILD] PyTorch version: {torch.__version__}'); print('[GPU BUILD] Production image ready - models will download on first use')"; \
+    fi
+
+# Set environment for production
+ENV PYTHONUNBUFFERED=1
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Create directories for mounted volumes
+RUN mkdir -p /app/data /app/output /app/logs
+
+EXPOSE 18011
+
+CMD ["uv", "run", "python3", "api_server.py", "--log-level", "info", "--port", "18011"]

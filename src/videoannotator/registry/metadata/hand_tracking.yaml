@@ -1,0 +1,38 @@
+name: hand_tracking
+display_name: Hand Tracking (21-Point)
+description: Capture hand movements with 21-point DOF tracing using MediaPipe Hands.
+pipeline_family: person
+variant: mediapipe-hands
+module_path: videoannotator.pipelines.hand_tracking.hand_pipeline:HandTrackingPipeline
+tasks:
+  - object-tracking
+  - pose-estimation
+modalities:
+  - video
+capabilities:
+  - real-time
+outputs:
+  - format: COCO
+    types: [keypoints, tracking]
+config_schema:
+  min_detection_confidence:
+    type: float
+    default: 0.5
+    description: Minimum confidence for hand detection
+  min_tracking_confidence:
+    type: float
+    default: 0.5
+    description: Minimum confidence for hand tracking
+  max_num_hands:
+    type: integer
+    default: 2
+    description: Maximum number of hands to track
+examples:
+  - cli: videoannotator job submit demo.mp4 --pipelines hand_tracking
+    description: Submit hand tracking job
+  - api: POST /api/v1/jobs (selected_pipelines=["hand_tracking"])
+    description: API job submission including hand tracking
+version: 1
+stability: beta
+backends:
+  - tflite

@@ -1,0 +1,132 @@
+version: "3.8"
+
+services:
+  # Development service
+  videoannotator-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./output:/app/output
+    environment:
+      - PYTHONPATH=/app
+      - CUDA_VISIBLE_DEVICES=0
+    ports:
+      - "8888:8888" # Jupyter
+      - "18011:18011" # FastAPI (host 18011 -> container 18011)
+    command: ["uv", "run", "videoannotator", "--help"]
+    profiles:
+      - dev
+
+  # Production service
+  videoannotator-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output
+    environment:
+      - PYTHONPATH=/app
+    command: ["uv", "run", "videoannotator", "server", "--host", "0.0.0.0", "--port", "18011"]
+    profiles:
+      - prod
+
+  # GPU-enabled service
+  videoannotator-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output
+    environment:
+      - PYTHONPATH=/app
+      - CUDA_VISIBLE_DEVICES=0
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: ["uv", "run", "videoannotator", "server", "--host", "0.0.0.0", "--port", "18011"]
+    profiles:
+      - gpu
+
+  # Development service with GPU and pre-cached models
+  videoannotator-dev-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./logs:/app/logs
+      - ./database:/app/database # Persistent database for development
+    environment:
+      - PYTHONPATH=/app
+      - CUDA_VISIBLE_DEVICES=0
+      - VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator_dev.db
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ports:
+      - "18011:18011" # FastAPI server (host 18011)
+    command: ["uv", "run", "videoannotator", "server", "--host", "0.0.0.0", "--port", "18011"]
+    profiles:
+      - dev-gpu
+
+  # Jupyter service for development
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./output:/app/output
+    ports:
+      - "8888:8888"
+    environment:
+      - PYTHONPATH=/app
+    command: ["bash", "-lc", "uv sync --extra dev && uv run jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root"]
+    profiles:
+      - dev
+
+  # Database service (optional, for future use)
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=videoannotator
+      - POSTGRES_USER=videoannotator
+      - POSTGRES_PASSWORD=videoannotator
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    profiles:
+      - db
+
+  # Redis service (optional, for caching)
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    profiles:
+      - cache
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: videoannotator_network

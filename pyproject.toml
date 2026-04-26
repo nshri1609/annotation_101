@@ -1,0 +1,396 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "videoannotator"
+version = "1.4.2"
+description = "A modern, modular toolkit for analyzing, processing, and visualizing human interaction videos"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "VideoAnnotator Team", email = "info@videoannotator.com"}
+]
+maintainers = [
+    {name = "Caspar Addyman", email = "addyman@sun.ac.za"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    # Core dependencies - Python 3.12 Compatible
+    "fastapi>=0.115.0",
+    "ipython>=8.12.3",
+    "librosa>=0.10.0",
+    "matplotlib>=3.9.2",
+    "moviepy>=1.0.3",
+    # Pin to a stable earlier version to avoid installation metadata issues in CI
+    "openai-whisper==20240930",
+    "numba>=0.60.0", # Ensure Python 3.12 compatibility
+    "openpyxl",
+    "pandas>=2.2.2",
+    "Pillow>=10.4.0",
+    # Note: pytest moved to [dependency-groups] dev — not needed at runtime
+    "python-dotenv>=1.0.1",
+    # Pin NumPy below 2.0 until all binary deps (scipy, matplotlib, pyannote, etc.) ship compatible wheels
+    "numpy>=1.24.0,<2.0",
+    "tqdm>=4.65.0",
+    # Video and computer vision - YOLO11 and detection
+    "ultralytics>=8.3.0",
+    "supervision>=0.16.0",
+    # Note: PyTorch with CUDA - Use UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124 for CUDA builds
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "timm>=0.9.0",
+    # Audio processing - Core packages that should work
+    "pyannote.audio>=3.3.2",
+    "pyannote.core>=5.0.0",
+    "pyannote.database>=5.1.0",
+    "pyannote.metrics>=3.2.1",
+    "pyannote.pipeline>=3.0.1",
+    "torchaudio>=2.0.0",
+    # Scene detection and video understanding
+    "scenedetect[opencv]>=0.6.3",
+    "transformers>=4.40.0",
+    # clip-by-openai - Not compatible with Python 3.12 and modern PyTorch
+    "sentence-transformers>=2.2.0",
+    # Face analysis - Limited set for Python 3.12
+    # deepface>=0.0.91 - Not compatible with Python 3.12 due to TensorFlow dependency
+    # face-recognition>=1.3.0 - Has compatibility issues
+    # mediapipe>=0.10.0 - Removed due to compatibility issues and slow Google updates (use DeepFace instead)
+    # fer>=22.5.0 - Has compatibility issues
+    # insightface>=0.7.3 - Has compatibility issues
+    # "dlib>=19.24.0",  # Requires cmake - install separately with conda
+    "imutils>=0.5.4",
+    # Note: cmake>=3.22.0 and dlib are installed via conda
+    # Additional ML/AI tools
+    "openai>=1.0.0",
+    "huggingface-hub>=0.20.0",
+    "accelerate>=0.20.0",
+    "datasets>=2.16.0",
+    # langchain packages removed due to compatibility issues
+    # Data processing and visualization
+    "seaborn>=0.12.0",
+    "plotly>=5.17.0",
+    "scipy>=1.11.0",
+    "scikit-learn>=1.3.0",
+    "networkx>=3.1",
+    "pydantic>=2.0.0",
+    "typer>=0.9.0",
+    # Additional video processing
+    "imageio>=2.31.0",
+    "imageio-ffmpeg>=0.4.8",
+    "av>=10.0.0",
+    # Multimodal and advanced AI
+    "open-clip-torch>=2.24.0",
+    # clip-interrogator removed due to compatibility issues
+    # Database and storage
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.12.0",
+    # API server dependencies
+    "uvicorn[standard]>=0.30.0",
+    "python-multipart>=0.0.9",
+    "psutil>=5.9.0",
+    # Note: pytest-asyncio moved to [dependency-groups] dev — not needed at runtime
+    # Configuration and utilities
+    "pyyaml>=6.0.0",
+    "rich>=13.0.0",
+    "click>=8.0.0",
+    "requests>=2.31.0",
+    "packaging>=21.0",
+    "pycocotools>=2.0.10",
+    "webvtt-py>=0.5.1",
+    "praatio>=6.2.0",
+    "pyjwt>=2.10.1",
+    "cryptography>=45.0.6",
+    "openface-test>=0.1.13",
+    "scikit-image>=0.25.2",
+    "ruff==0.14.0",
+    "opencv-python-headless>=4.11.0.86",
+    "mediapipe>=0.10.33",
+    "lap>=0.5.13",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.0",
+    "pre-commit>=3.0.0",
+    "jupyter>=1.0.0",
+    "jupyterlab>=4.0.0",
+    "pytest-cov>=4.0.0",
+    "mypy>=1.5.0",
+]
+annotation = [
+    # Note: These packages have compatibility issues with Python 3.12
+    # "label-studio-sdk>=0.0.32",
+    # "fiftyone>=0.23.0",
+    # "roboflow>=1.1.0",
+]
+all = [
+    "videoannotator[dev,annotation]"
+]
+
+[project.urls]
+Homepage = "https://github.com/InfantLab/VideoAnnotator"
+Documentation = "https://github.com/InfantLab/VideoAnnotator/wiki"
+Repository = "https://github.com/InfantLab/VideoAnnotator"
+Issues = "https://github.com/InfantLab/VideoAnnotator/issues"
+
+[project.scripts]
+# Entry point for the CLI application
+videoannotator = "videoannotator.cli:app"
+
+[tool.uv]
+# uv-native config - empty is fine for now
+
+[tool.uv.extra-build-dependencies]
+openai-whisper = ["setuptools", "wheel"]
+
+# [[tool.uv.index]]
+# name = "pytorch-cu124"
+# url = "https://download.pytorch.org/whl/cu124"
+# explicit = true
+
+# [tool.uv.sources]
+# torch = { index = "pytorch-cu124" }
+# torchvision = { index = "pytorch-cu124" }
+# torchaudio = { index = "pytorch-cu124" }
+
+[tool.ruff]
+line-length = 88  # Keep existing Black line length for consistency
+lint.select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+lint.ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E402",   # module-import-not-at-top (common in conditional/ML imports)
+    "SIM102", # collapsible-if (stylistic)
+    "SIM105", # use contextlib.suppress (stylistic)
+    "SIM108", # if-else-block-instead-of-if-exp (stylistic)
+    "SIM115", # open-file-with-context-handler (stylistic)
+    "SIM117", # multiple-with-statements (stylistic)
+    "SIM118", # in-dict-keys (stylistic)
+    "RUF001", # ambiguous-unicode-character (false positives in strings)
+    "RUF005", # collection-literal-concatenation (stylistic)
+    "RUF013", # implicit-optional (common in ML code)
+    "RUF022", # unsorted-dunder-all (low value)
+    "RUF059", # unused-unpacked-variable (common in tuple unpacking)
+]
+target-version = "py312"
+
+# Per-file exceptions:
+# - API modules use FastAPI dependency injection (B008 is expected)
+# - batch_orchestrator has a valid Optional default pattern (RUF013)
+[tool.ruff.lint.per-file-ignores]
+"src/videoannotator/api/**/*.py" = ["B008"]
+"src/videoannotator/cli.py" = ["B008", "B904"]
+"src/batch/batch_orchestrator.py" = ["RUF013"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+ignore_missing_imports = true
+follow_imports = "skip"
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+check_untyped_defs = false
+disallow_any_generics = false  # Relaxed for ML dependencies
+disallow_incomplete_defs = false
+no_implicit_optional = false
+
+# Exclude files/patterns from mypy checking (reduces noise from ML/storage modules)
+exclude = [
+    "src/pipelines/",
+    "src/storage/models.py",
+    "src/storage/file_backend.py",
+    "src/utils/person_identity.py",
+    "src/utils/automatic_labeling.py",
+    "src/utils/size_based_person_analysis.py",
+    "src/utils/logging_config.py",
+    "src/version.py",
+    "src/exporters/native_formats.py",
+    "src/schemas/",
+    "examples/",
+    "scripts/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "src.api.*",
+    "tests.api.*",
+    "tests.integration.test_api_integration",
+]
+check_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--tb=short",
+]
+markers = [
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (cross-component)",
+    "pipeline: Full pipeline tests (slow)",
+    "performance: Performance and benchmark tests",
+    "experimental: Experimental and research tests",
+    "slow: Tests that take >10 seconds",
+    "gpu: Tests requiring GPU acceleration",
+    "real_models: Tests using real ML models",
+    "meta: marks tests as meta-tests for testing test infrastructure",
+    "asyncio: marks tests as requiring asyncio support",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*_test.py",
+    "*/examples/*",
+    "*/scripts/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+branch = true
+parallel = false
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if 0:",
+    "if False:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.paths]
+source = [
+    "src/",
+    "*/site-packages/",
+]
+
+[dependency-groups]
+dev = [
+    "docformatter>=1.7.7",
+    "httpx>=0.28.1",
+    "libcst>=1.8.5",
+    "mypy>=1.5.0",
+    "pre-commit>=4.3.0",
+    "pydocstyle>=6.3.0",
+    "pytest>=8.3.2",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.14.0",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "cv2",
+    "whisper",
+    "pyannote.*",
+    "ultralytics",
+    "sentence_transformers",
+    "librosa",
+    "moviepy.*",
+    "scenedetect.*",
+    "transformers",
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "supervision",
+    "timm",
+    "dlib",
+    "imutils",
+    "datasets",
+    "openai",
+    "huggingface_hub",
+    "accelerate",
+    "plotly.*",
+    "seaborn",
+    "networkx",
+    "imageio",
+    "av",
+    "open_clip_torch",
+    "sqlalchemy",
+    "alembic",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# speech pipeline interacts with heavy third-party speech libraries (whisper, torch) that
+# produce large, environment-dependent typing noise. Relax checks for this module while
+# keeping API modules strict.
+module = ["pipelines.audio_processing.speech_pipeline"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Storage modules use SQLAlchemy models and runtime-mapped attributes
+module = "storage.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Pipeline modules interact with heavy ML libraries (incomplete/dynamic typing)
+module = "pipelines.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Utility modules with complex dynamic typing patterns
+module = "utils.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Version module has dynamic git-based logic
+module = "version"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Examples are not part of the core package
+module = "examples.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Scripts are utilities, not core package code
+module = "scripts.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Exporters work with dynamic data structures
+module = "exporters.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Schemas module has placeholder types
+module = "schemas"
+ignore_errors = true

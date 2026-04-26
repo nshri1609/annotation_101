@@ -1,0 +1,31 @@
+name: object_detection
+display_name: Object Detection (YOLOv11)
+description: Generic object detection and tracking for 80 COCO classes.
+outputs:
+  - format: COCO
+    types: ["boxes", "labels", "scores"]
+config_schema:
+  model_name:
+    type: string
+    default: "yolo11n.pt"
+    description: "YOLOv11 model variant to use (e.g., yolo11n.pt, yolo11s.pt)."
+  confidence_threshold:
+    type: float
+    default: 0.25
+    description: "Minimum confidence score for object detection."
+  iou_threshold:
+    type: float
+    default: 0.45
+    description: "NMS IoU threshold for overlapping boxes."
+  classes:
+    type: list
+    default: []
+    description: "Optional list of specific class IDs to detect. Leave empty for all."
+version: 1
+pipeline_family: object
+variant: yolov11
+tasks:
+  - detection
+  - tracking
+backends:
+  - ultralytics
